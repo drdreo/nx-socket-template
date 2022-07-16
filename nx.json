@@ -12,33 +12,49 @@
   },
   "tasksRunnerOptions": {
     "default": {
-      "runner": "@nrwl/workspace/tasks-runners/default",
+      "runner": "@nrwl/nx-cloud",
       "options": {
-        "cacheableOperations": ["build", "lint", "test", "e2e"]
+        "cacheableOperations": ["build", "lint", "test", "e2e"],
+        "accessToken": "MzhmN2M1YjEtZGVmZC00MDhmLWE3NmEtNDI3YWM1YWJmODQxfHJlYWQtd3JpdGU=",
+        "parallel": 1
       }
     }
   },
-  "targetDependencies": {
-    "build": [
-      {
-        "target": "build",
-        "projects": "dependencies"
-      }
-    ]
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "cli": {
+    "packageManager": "npm",
+    "defaultCollection": "@nrwl/angular"
   },
-  "projects": {
-    "api": {
-      "tags": []
+  "defaultProject": "nx-socket-template",
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"]
+    }
+  },
+  "generators": {
+    "@nrwl/angular": {
+      "application": {
+        "linter": "eslint"
+      },
+      "library": {
+        "linter": "eslint"
+      },
+      "storybook-configuration": {
+        "linter": "eslint"
+      }
     },
-    "api-interfaces": {
-      "tags": []
+    "@nrwl/angular:application": {
+      "style": "scss",
+      "linter": "eslint",
+      "unitTestRunner": "jest",
+      "e2eTestRunner": "cypress"
     },
-    "nx-socket-template": {
-      "tags": []
+    "@nrwl/angular:library": {
+      "linter": "eslint",
+      "unitTestRunner": "jest"
     },
-    "nx-socket-template-e2e": {
-      "tags": [],
-      "implicitDependencies": ["nx-socket-template"]
+    "@nrwl/angular:component": {
+      "style": "scss"
     }
   }
 }

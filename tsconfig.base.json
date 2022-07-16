@@ -15,8 +15,11 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@socket-template-app/api-interfaces": [
-        "libs/api-interfaces/src/index.ts"
+      "@shared/utils": ["libs/shared/utils/src/index.ts"],
+      "@socket-template-app/api-interfaces": ["libs/api-interfaces/src/index.ts"],
+      "@socket-template-app/api/socket": ["libs/api/socket/src/index.ts"],
+      "@socket-template-app/nx-socket-template/data-access": [
+        "libs/nx-socket-template/data-access/src/index.ts"
       ]
     }
   },

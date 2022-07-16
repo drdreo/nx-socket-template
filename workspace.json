@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "projects": {
+    "api": "apps/api",
+    "api-interfaces": "libs/api-interfaces",
+    "api-socket": "libs/api/socket",
+    "nx-socket-template": "apps/nx-socket-template",
+    "nx-socket-template-data-access": "libs/nx-socket-template/data-access",
+    "nx-socket-template-e2e": "apps/nx-socket-template-e2e",
+    "shared-utils": "libs/shared/utils"
+  }
+}

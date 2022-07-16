@@ -1,9 +1,11 @@
 <div style="text-align: center">
-  <h1>Welcome to nx-socket-template!</h1>
-  <img
-    width="450"
-    src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png"
-    alt="Nx - Smart, Extensible Build Framework"
-  />
+    <h1>Welcome to nx-socket-template!</h1>
+    <img alt="Nx - Smart, Extensible Build Framework"
+         src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png"
+         width="450"/>
 </div>
-<div>Message: {{ hello$ | async | json }}</div>
+
+<input #nameInput placeholder="Name" type="text"/>
+<input #roomInput placeholder="Room" type="text"/>
+<button (click)="join(nameInput.value, roomInput.value)">Join</button>
+<button (click)="start()">Start</button>

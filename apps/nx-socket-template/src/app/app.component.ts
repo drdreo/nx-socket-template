@@ -1,13 +1,23 @@
 import { Component } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Message } from '@socket-template-app/api-interfaces';
+import { SocketService } from '@socket-template-app/nx-socket-template/data-access';
 
 @Component({
-  selector: 'socket-template-app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
+    selector: 'socket-template-app-root',
+    templateUrl: './app.component.html',
+    styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
-  hello$ = this.http.get<Message>('/api/hello');
-  constructor(private http: HttpClient) {}
+    constructor(private socketService: SocketService) {}
+
+    join(userName: string, roomName: string): void {
+        this.socketService.join(userName, roomName);
+    }
+
+    start(): void {
+        this.socketService.start();
+    }
+
+    kick(): void {
+        this.socketService.voteKick('123');
+    }
 }

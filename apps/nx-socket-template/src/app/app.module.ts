@@ -1,13 +1,17 @@
+import { HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { SocketIoConfig, SocketIoModule } from 'ngx-socket-io';
 
 import { AppComponent } from './app.component';
-import { HttpClientModule } from '@angular/common/http';
+
+
+const socketConfig: SocketIoConfig = { url: 'http://localhost:3333', options: {} };
 
 @NgModule({
-  declarations: [AppComponent],
-  imports: [BrowserModule, HttpClientModule],
-  providers: [],
-  bootstrap: [AppComponent],
+    declarations: [AppComponent],
+    imports: [BrowserModule, HttpClientModule, SocketIoModule.forRoot(socketConfig)],
+    providers: [],
+    bootstrap: [AppComponent]
 })
 export class AppModule {}
