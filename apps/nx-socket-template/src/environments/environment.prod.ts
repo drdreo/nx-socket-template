@@ -1,3 +1,6 @@
 export const environment = {
-  production: true,
+    production: true,
+    socket: {
+        serverUrl: 'http://localhost:3333'
+    }
 };

@@ -1,5 +1,6 @@
 export interface RoomInfo {
     name: string;
+    started: boolean;
 }
 
 export interface HomeInfo {

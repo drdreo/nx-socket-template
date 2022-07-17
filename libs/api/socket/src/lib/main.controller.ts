@@ -2,7 +2,7 @@ import { Controller, HttpStatus, Get, Param, HttpException } from '@nestjs/commo
 import { HomeInfo, RoomResponse } from '@socket-template-app/api-interfaces';
 import { RoomService } from './room.service';
 
-@Controller('api')
+@Controller()
 export class MainController {
     constructor(private readonly roomService: RoomService) {}
 
@@ -10,6 +10,7 @@ export class MainController {
     getHomeInfo(): HomeInfo {
         return { rooms: this.roomService.getAllRooms(), userCount: this.roomService.getUserCount() };
     }
+
 
     @Get('/room/:name')
     getTable(@Param('name') name): RoomResponse {

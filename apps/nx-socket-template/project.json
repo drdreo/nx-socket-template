@@ -6,7 +6,9 @@
   "targets": {
     "build": {
       "executor": "@angular-devkit/build-angular:browser",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/nx-socket-template",
         "index": "apps/nx-socket-template/src/index.html",
@@ -18,7 +20,10 @@
           "apps/nx-socket-template/src/favicon.ico",
           "apps/nx-socket-template/src/assets"
         ],
-        "styles": ["apps/nx-socket-template/src/styles.scss"],
+        "styles": [
+          "apps/nx-socket-template/src/styles.scss",
+          "libs/nx-socket-template/ui/src/lib/styles/variables.scss"
+        ],
         "scripts": []
       },
       "configurations": {
@@ -86,7 +91,9 @@
     },
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/apps/nx-socket-template"],
+      "outputs": [
+        "coverage/apps/nx-socket-template"
+      ],
       "options": {
         "jestConfig": "apps/nx-socket-template/jest.config.ts",
         "passWithNoTests": true

@@ -1,19 +1,26 @@
 import { Logger } from '@nestjs/common';
 import { SubscribeMessage, WebSocketGateway, WsException, OnGatewayDisconnect, WsResponse, WebSocketServer, ConnectedSocket, OnGatewayConnection, MessageBody } from '@nestjs/websockets';
-import { SocketEvent, UserEvent, ServerJoined, HomeInfo, UserVoteKickMessage, UserJoinMessage } from '@socket-template-app/api-interfaces';
+import { ServerEvent, UserEvent, ServerJoined, HomeInfo, UserVoteKickMessage, UserJoinMessage, ServerSpectatorJoined, UserSpectatorJoinMessage } from '@socket-template-app/api-interfaces';
 import { Server, Socket } from 'socket.io';
+import { environment } from '../../../../../apps/api/src/environments/environment';
 import { RoomService } from './room.service';
 import { InvalidConfigError, RoomFullError, RoomStartedError } from './room/errors';
 import { User } from './user/User';
 
-const SOCKET_USER_ID_TOKEN = 'user-id';
-const SOCKET_ROOM_TOKEN = 'room';
 
 // @UseInterceptors(SentryInterceptor)
-@WebSocketGateway({ cors: true })
+@WebSocketGateway({
+    cors: {
+        origin: environment.clientUrl,
+        methods: ['GET', 'POST'],
+        credentials: true
+    }
+})
 export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer() server: Server;
 
+    private socketToRoom = new Map<string, string>();
+    private userToSocket = new Map<string, string>();
     private logger = new Logger(MainGateway.name);
 
     constructor(private roomService: RoomService) {
@@ -21,13 +28,14 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     handleConnection(socket: Socket) {
-        this.logger.debug(`A new socket{${ socket.id }} connected!`);
+        this.logger.debug(`A new socket[${ socket.id }] connected!`);
     }
 
     handleDisconnect(socket: Socket) {
-        this.logger.debug(`A socket{${ socket.id }} disconnected!`);
+        this.logger.debug(`A socket[${ socket.id }] disconnected!`);
 
-        this.handleUserDisconnect(socket[SOCKET_USER_ID_TOKEN], socket[SOCKET_ROOM_TOKEN]);
+        const roomOfSocket = this.getRoomBySocketId(socket.id);
+        this.handleUserDisconnect(socket.data.userID, roomOfSocket);
     }
 
     @SubscribeMessage(UserEvent.JoinRoom)
@@ -35,8 +43,8 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.logger.log(`User[${ userName }] joining!`);
         let sanitizedRoom = roomName.toLowerCase();
         socket.join(sanitizedRoom);
-        socket[SOCKET_ROOM_TOKEN] = sanitizedRoom;
-        socket[SOCKET_USER_ID_TOKEN] = userID; // either overwrite existing one, reset it if its undefined
+        this.socketToRoom.set(socket.id, sanitizedRoom);
+        socket.data.userID = userID; // either overwrite existing one, reset it if its undefined
 
         let newUserID;
 
@@ -48,14 +56,12 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.logger.debug(`Users last room[${ room.name }] found!`);
 
             if (room.name !== sanitizedRoom) {
-                this.logger.warn(
-                    `User tried to join other room than they were playing on!`
-                );
+                this.logger.warn(`User tried to join other room than they were playing on!`);
                 // leave the passed room and join old one again
                 socket.leave(sanitizedRoom);
                 sanitizedRoom = room.name;
                 socket.join(sanitizedRoom);
-                socket[SOCKET_ROOM_TOKEN] = sanitizedRoom;
+                this.socketToRoom.set(socket.id, sanitizedRoom);
             }
         } else if (userName) {
             // new User wants to create or join
@@ -75,7 +81,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
                         this.logger.debug('Couldnt create or join room, join as spectator!');
                         this.onJoinSpectator(socket, { roomName });
                         return {
-                            event: SocketEvent.Joined,
+                            event: ServerEvent.Joined,
                             data: { userID: userID, room: sanitizedRoom }
                         };
                     } else {
@@ -93,31 +99,31 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
 
         // connect the socket with its userID
-        socket[SOCKET_USER_ID_TOKEN] = newUserID;
-        socket[SOCKET_ROOM_TOKEN] = sanitizedRoom;
+        socket.data.userID = newUserID;
+        this.socketToRoom.set(socket.id, sanitizedRoom);
 
         // inform everyone that someone joined
         this.roomService.getRoom(sanitizedRoom).sendUsersUpdate();
         return {
-            event: SocketEvent.Joined,
+            event: ServerEvent.Joined,
             data: { userID: newUserID, room: sanitizedRoom }
         };
     }
 
     @SubscribeMessage(UserEvent.SpectatorJoin)
-    onJoinSpectator(@ConnectedSocket() socket: Socket, @MessageBody() { roomName }) {
+    onJoinSpectator(@ConnectedSocket() socket: Socket, @MessageBody() { roomName } : UserSpectatorJoinMessage): WsResponse<ServerSpectatorJoined> {
         const sanitizedRoom = roomName.toLowerCase();
         this.logger.log(`Spectator trying to join room[${ sanitizedRoom }]!`);
         const room = this.roomService.getRoom(sanitizedRoom);
 
         if (room && room.getConfig().spectatorsAllowed) {
             socket.join(sanitizedRoom);
-            socket[SOCKET_ROOM_TOKEN] = sanitizedRoom;
+            this.socketToRoom.set(socket.id, sanitizedRoom);
 
-            // tell the spectator all information if game started: users, game status, board, pot
+            // tell the spectator all information if game started: users, game status, etc.
             this.onRequestUpdate(socket);
 
-            return { event: SocketEvent.Joined, data: { room: sanitizedRoom } };
+            return { event: ServerEvent.Joined, data: { room: sanitizedRoom } };
         } else {
             throw new WsException('Spectating is not allowed!');
         }
@@ -125,7 +131,8 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage(UserEvent.RequestUpdate)
     onRequestUpdate(@ConnectedSocket() socket: Socket) {
-        const room = this.roomService.getRoom(socket[SOCKET_ROOM_TOKEN]);
+        const roomOfSocket = this.socketToRoom.get(socket.id);
+        const room = this.roomService.getRoom(roomOfSocket);
         if (!room) {
             throw new WsException('Can not request data. Room not found!');
         }
@@ -135,36 +142,33 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     @SubscribeMessage(UserEvent.Start)
     onStartGame(@ConnectedSocket() socket: Socket) {
-        const room = socket[SOCKET_ROOM_TOKEN];
+        const room = this.socketToRoom.get(socket.id);
         this.roomService.start(room);
         this.sendHomeInfo();
     }
 
     @SubscribeMessage(UserEvent.Leave)
-    onUserLeave(@ConnectedSocket() socket: Socket) {
-        const userID = socket[SOCKET_USER_ID_TOKEN];
-        const room = socket[SOCKET_ROOM_TOKEN];
-        this.handleUserDisconnect(userID, room);
+    onUserLeave(@ConnectedSocket() socket: Socket): void {
+        const room = this.socketToRoom.get(socket.id);
+        this.handleUserDisconnect(socket.data.userID, room);
     }
 
     @SubscribeMessage(UserEvent.VoteKick)
     onVoteKick(@ConnectedSocket() socket: Socket, @MessageBody() { kickUserID }: UserVoteKickMessage) {
-        const userID = socket[SOCKET_USER_ID_TOKEN];
-        const room = socket[SOCKET_ROOM_TOKEN];
-        this.roomService.voteKick(room, userID, kickUserID);
+        const room = this.socketToRoom.get(socket.id);
+        this.roomService.voteKick(room, socket.data.userID, kickUserID);
     }
 
-    private sendTo(recipient: string, event: SocketEvent, data?: any) {
+    private sendTo(recipient: string, event: ServerEvent, data?: any) {
         this.server.to(recipient).emit(event, data);
     }
 
-    private sendToAll(event: SocketEvent, data?: any) {
+    private sendToAll(event: ServerEvent, data?: any) {
         this.server.emit(event, data);
     }
 
     private async getSocketIdByUserId(userId: string) {
-        const sockets = await this.server.fetchSockets();
-        return sockets.find((socket) => socket[SOCKET_USER_ID_TOKEN] === userId)?.id;
+        return this.userToSocket.get(userId);
     }
 
     private async getUserIdBySocketId(socketId: string) {
@@ -172,9 +176,13 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const socket = sockets.find((socket) => socket.id === socketId);
 
         if (socket) {
-            return socket[SOCKET_USER_ID_TOKEN];
+            return socket.data.userID;
         }
         return undefined;
+    }
+
+    private getRoomBySocketId(socketId: string): string | undefined {
+        return this.socketToRoom.get(socketId);
     }
 
     /**
@@ -184,7 +192,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
      */
     private handleUserDisconnect(userID: string | undefined, room: string | undefined) {
         if (!userID) {
-            console.error('UserID not patched. Very weird!');
+            return; // user left without joining a room
         }
 
         if (userID && this.roomService.userExists(userID)) {
@@ -192,7 +200,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
             this.roomService.userLeft(room, userID);
 
             if (room) {
-                this.sendTo(room, SocketEvent.UserLeft, { userID });
+                this.sendTo(room, ServerEvent.UserLeft, { userID });
             } else {
                 this.logger.error(`User[${ userID }] disconnected or left, but room[${ room }] no longer exists!`);
             }
@@ -202,8 +210,8 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // to prevent sockets from still receiving game messages. Leaves the room and unsets all socket data
     private disconnectSocket(socket: any, room: string) {
         socket.leave(room);
-        socket[SOCKET_ROOM_TOKEN] = undefined;
-        socket[SOCKET_USER_ID_TOKEN] = null;
+        this.socketToRoom.delete(socket.id);
+        this.userToSocket.delete(socket.data.userID);
     }
 
     private async sendUserUpdateIndividually(room: string, users: User[], data: any) {
@@ -211,7 +219,7 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const socketId = await this.getSocketIdByUserId(user.id);
             // only tell currently connected users the update
             if (socketId && !user.disconnected) {
-                this.sendTo(socketId, SocketEvent.UsersUpdate, data);
+                this.sendTo(socketId, ServerEvent.UsersUpdate, data);
             }
         }
     }
@@ -221,9 +229,9 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const socketsOfRoom = await this.server.in(roomName).fetchSockets();
 
         for (const socket of socketsOfRoom) {
-            const isSpectator = room.isSpectator(socket[SOCKET_USER_ID_TOKEN]);
+            const isSpectator = room.isSpectator(socket.data.userID);
             if (isSpectator) {
-                this.sendTo(roomName, SocketEvent.UsersUpdate, data);
+                this.sendTo(roomName, ServerEvent.UsersUpdate, data);
             }
         }
     }
@@ -233,6 +241,6 @@ export class MainGateway implements OnGatewayConnection, OnGatewayDisconnect {
             rooms: this.roomService.getAllRooms(),
             userCount: this.roomService.getUserCount()
         };
-        this.sendToAll(SocketEvent.Info, response);
+        this.sendToAll(ServerEvent.Info, response);
     }
 }
