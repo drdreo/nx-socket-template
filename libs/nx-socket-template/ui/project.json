@@ -1,11 +1,12 @@
 {
+  "name": "nx-socket-template-ui",
   "projectType": "library",
   "sourceRoot": "libs/nx-socket-template/ui/src",
   "prefix": "socket-template-app",
   "targets": {
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/libs/nx-socket-template/ui"],
+      "outputs": ["{workspaceRoot}/coverage/libs/nx-socket-template/ui"],
       "options": {
         "jestConfig": "libs/nx-socket-template/ui/jest.config.ts",
         "passWithNoTests": true

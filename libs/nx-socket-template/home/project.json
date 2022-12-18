@@ -1,11 +1,12 @@
 {
+  "name": "nx-socket-template-home",
   "projectType": "library",
   "sourceRoot": "libs/nx-socket-template/home/src",
   "prefix": "socket-template-app",
   "targets": {
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/libs/nx-socket-template/home"],
+      "outputs": ["{workspaceRoot}/coverage/libs/nx-socket-template/home"],
       "options": {
         "jestConfig": "libs/nx-socket-template/home/jest.config.ts",
         "passWithNoTests": true

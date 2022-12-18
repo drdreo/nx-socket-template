@@ -1,4 +1,5 @@
 {
+  "name": "nx-socket-template-e2e",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "apps/nx-socket-template-e2e/src",
   "projectType": "application",

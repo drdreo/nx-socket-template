@@ -1,4 +1,5 @@
 {
+  "name": "nx-socket-template",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/nx-socket-template/src",
@@ -6,9 +7,7 @@
   "targets": {
     "build": {
       "executor": "@angular-devkit/build-angular:browser",
-      "outputs": [
-        "{options.outputPath}"
-      ],
+      "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "dist/apps/nx-socket-template",
         "index": "apps/nx-socket-template/src/index.html",
@@ -91,9 +90,7 @@
     },
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": [
-        "coverage/apps/nx-socket-template"
-      ],
+      "outputs": ["{workspaceRoot}/coverage/apps/nx-socket-template"],
       "options": {
         "jestConfig": "apps/nx-socket-template/jest.config.ts",
         "passWithNoTests": true

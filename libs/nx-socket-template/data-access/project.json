@@ -1,11 +1,14 @@
 {
+  "name": "nx-socket-template-data-access",
   "projectType": "library",
   "sourceRoot": "libs/nx-socket-template/data-access/src",
   "prefix": "socket-template-app",
   "targets": {
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/libs/nx-socket-template/data-access"],
+      "outputs": [
+        "{workspaceRoot}/coverage/libs/nx-socket-template/data-access"
+      ],
       "options": {
         "jestConfig": "libs/nx-socket-template/data-access/jest.config.ts",
         "passWithNoTests": true
